@@ -11,3 +11,7 @@ google-services.json
 *.jks
 *.keystore
 key.properties
+keystore.properties
+keystore/
+.kotlin/
+app/release/
