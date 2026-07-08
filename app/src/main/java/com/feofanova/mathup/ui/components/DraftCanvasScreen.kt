@@ -156,7 +156,7 @@ fun DraftCanvasScreen(
                 )
             },
             colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                containerColor = Color(0xFFFFFFFF) // ✅ Цвет фона панели
+                containerColor = Color(0xFFFFFFFF)
             ),
             actions = {
                 Box(

@@ -173,7 +173,7 @@ fun SettingsScreen(
                 onApplyName = {
                     coroutineScope.launch {
                         try {
-                            updateFirebaseName(newName) // 👈 просто вызвать suspend-функцию
+                            updateFirebaseName(newName)
                             FirebaseAuth.getInstance().currentUser?.reload()?.await()
                             currentName = FirebaseAuth.getInstance().currentUser?.displayName ?: "Имя пользователя"
                             snackbarHostState.showSnackbar("Имя успешно обновлено")
@@ -198,7 +198,7 @@ fun SettingsScreen(
                 shape = RoundedCornerShape(16.dp),
                 elevation = CardDefaults.cardElevation(6.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = Color.White // 👈 делает карту белой
+                    containerColor = Color.White
                 )
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -246,7 +246,6 @@ fun SettingsScreen(
             //    shape = RoundedCornerShape(16.dp),
             //      elevation = CardDefaults.cardElevation(6.dp),
             //      colors = CardDefaults.cardColors(
-            //           containerColor = Color.White // 👈 делает карту белой
             //      )
             //    ) {
             //       Row(
@@ -280,7 +279,7 @@ fun SettingsScreen(
                 shape = RoundedCornerShape(16.dp),
                 elevation = CardDefaults.cardElevation(6.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = Color.White // 👈 делает карту белой
+                    containerColor = Color.White
                 )
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -373,7 +372,7 @@ fun SettingsScreen(
                 shape = RoundedCornerShape(16.dp),
                 elevation = CardDefaults.cardElevation(6.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = Color.White // 👈 делает карту белой
+                    containerColor = Color.White
                 )
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -417,7 +416,7 @@ fun SettingsScreen(
                 shape = RoundedCornerShape(16.dp),
                 elevation = CardDefaults.cardElevation(6.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = Color.White // 👈 делает карту белой
+                    containerColor = Color.White
                 )
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -464,7 +463,7 @@ fun SettingsScreen(
                 shape = RoundedCornerShape(16.dp),
                 elevation = CardDefaults.cardElevation(6.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = Color.White // 👈 делает карту белой
+                    containerColor = Color.White
                 )
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -512,13 +511,13 @@ fun SettingsScreen(
                     .clickable(
                         enabled = !isUpdatingContent,
                         interactionSource = remember { MutableInteractionSource() },
-                        indication = null // 🔹 отключает ripple
+                        indication = null
                     ) {
                         scope.launch {
                             isUpdatingContent = true
                             try {
                                 val egeDb = MathUpDatabase.getInstance(context)
-                                val ogeDb = MathUpOgeDatabase.getInstance(context) // 🔄 добавляем вторую БД
+                                val ogeDb = MathUpOgeDatabase.getInstance(context)
                                 val gameDb = GameDatabase.getInstance(context)
 
                                 DataSyncManager.syncFromRemote(context, egeDb)
@@ -587,7 +586,7 @@ fun SettingsScreen(
                 shape = RoundedCornerShape(16.dp),
                 elevation = CardDefaults.cardElevation(6.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = Color.White // 👈 делает карту белой
+                    containerColor = Color.White
                 )
             ) {
                 Row(
@@ -796,7 +795,7 @@ fun SettingsActionItem(
             .fillMaxWidth()
             .clickable(
                 onClick = onClick,
-                indication = null, // 🔹 убираем тёмную заливку при клике
+                indication = null,
                 interactionSource = remember { MutableInteractionSource() }
             )
             .padding(start = contentPaddingStart, top = 10.dp, bottom = 10.dp),

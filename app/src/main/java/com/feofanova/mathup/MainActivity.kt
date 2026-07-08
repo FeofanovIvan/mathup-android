@@ -1,9 +1,7 @@
 package com.feofanova.mathup
 
-import android.content.Context
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -18,28 +16,24 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
-import androidx.core.content.edit
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.rememberNavController
-import com.feofanova.mathup.data.characters.GameDataSyncManager
-import com.feofanova.mathup.data.characters.GameDatabase
 import com.feofanova.mathup.data.local.db.MathUpDatabase
-import com.feofanova.mathup.data.local.db.MathUpOgeDatabase
-import com.feofanova.mathup.data.repository.DataSyncManager
+import com.feofanova.mathup.sync.InitialContentSyncUseCase
 import com.feofanova.mathup.sound.LocalSoundPlayer
 import com.feofanova.mathup.sound.SoundPlayer
 import com.feofanova.mathup.sound.SoundSettingsDataStore
 import com.feofanova.mathup.ui.navigation.AppNavGraph
 import com.feofanova.mathup.ui.screens.main.ProfileViewModel
 import com.feofanova.mathup.ui.theme.MathUpTheme
-import com.google.gson.Gson
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
     private val syncDone = mutableStateOf(false)
     private lateinit var soundPlayer: SoundPlayer
+    private val initialContentSync = InitialContentSyncUseCase()
 
     @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,7 +46,7 @@ class MainActivity : ComponentActivity() {
         soundPlayer = SoundPlayer(this) // Глобально
 
         lifecycleScope.launch {
-            syncFromAssetsIfFirstLaunch(applicationContext)
+            initialContentSync(applicationContext)
             syncDone.value = true
         }
 
@@ -123,42 +117,3 @@ class MainActivity : ComponentActivity() {
         soundPlayer.release()
     }
 }
-
-// 🔁 Синхронизация баз данных при первом запуске
-private suspend fun syncFromAssetsIfFirstLaunch(context: Context) {
-    val prefs = context.getSharedPreferences("sync_prefs", Context.MODE_PRIVATE)
-    val metadataJson = prefs.getString("sync_metadata", null)
-
-    if (metadataJson == null) {
-        Log.d("SyncAssets", "🆕 Первый запуск. Начинаем загрузку из assets...")
-
-        val gameDb = GameDatabase.getInstance(context)
-        val egeDb = MathUpDatabase.getInstance(context)
-        val ogeDb = MathUpOgeDatabase.getInstance(context)
-
-        try {
-            DataSyncManager.syncFromAssets(context, egeDb)
-            DataSyncManager.syncOgeFromAssets(context, ogeDb)
-            GameDataSyncManager.syncGameDataFromAssets(context, gameDb)
-
-            val metadata = SyncMetadata(
-                version_ege = 1,
-                version_oge = 1,
-                version_game = 1
-            )
-            prefs.edit { putString("sync_metadata", Gson().toJson(metadata)) }
-            Log.d("SyncAssets", "✅ Загрузка завершена и metadata сохранена")
-
-        } catch (e: Exception) {
-            Log.e("SyncAssets", "❌ Ошибка при синхронизации из assets", e)
-        }
-    } else {
-        Log.d("SyncAssets", "ℹ️ Данные уже есть — пропускаем загрузку из assets")
-    }
-}
-
-data class SyncMetadata(
-    val version_game: Int = 1,
-    val version_oge: Int = 1,
-    val version_ege: Int = 1,
-)

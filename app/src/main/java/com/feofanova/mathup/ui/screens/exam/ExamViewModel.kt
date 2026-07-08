@@ -1,6 +1,5 @@
 package com.feofanova.mathup.ui.screens.exam
 
-import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -8,16 +7,20 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.feofanova.mathup.data.local.dao.AppDao
-import com.feofanova.mathup.data.stats.entities.ExamSessionEntity
-import com.feofanova.mathup.data.stats.entities.ExamTaskEntity
 import com.feofanova.mathup.data.local.entities.TaskEntity
+import com.feofanova.mathup.data.repository.RoomExamRepository
 import com.feofanova.mathup.data.stats.dao.StatsDao
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
+import com.feofanova.mathup.data.stats.entities.ExamSessionEntity
+import com.feofanova.mathup.domain.repository.ExamAnswerCheckItem
+import com.feofanova.mathup.domain.repository.ExamRepository
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
+data class ExamUiState(
+    val tasks: List<TaskEntity> = emptyList(),
+    val selectedTaskId: Long? = null,
+    val selectedTab: TaskExamTab = TaskExamTab.Task,
+    val sessionId: Long? = null
+)
 
 class ExamViewModelFactory(
     private val baseDao: AppDao,
@@ -27,178 +30,101 @@ class ExamViewModelFactory(
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(ExamViewModel::class.java)) {
-            val dao = if (profile.lowercase() == "огэ") ogeDao else baseDao
+            val repository = RoomExamRepository(
+                baseDao = baseDao,
+                ogeDao = ogeDao,
+                statsDao = statsDao,
+                profile = profile
+            )
+
             @Suppress("UNCHECKED_CAST")
-            return ExamViewModel(dao, statsDao, profile) as T
+            return ExamViewModel(repository) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
 
-
-
-
 class ExamViewModel(
-    private val dao: AppDao,
-    private val statsDao: StatsDao,
-    private val profile: String
+    private val examRepository: ExamRepository
 ) : ViewModel() {
 
-    private val _examTasks = MutableStateFlow<List<TaskEntity>>(emptyList())
-    val examTasks: StateFlow<List<TaskEntity>> = _examTasks
+    var uiState by mutableStateOf(ExamUiState())
+        private set
 
-    var selectedTaskId by mutableStateOf<Long?>(null)
-    var selectedTab by mutableStateOf(TaskExamTab.Task)
-    var sessionId: Long? = null
-
-    private suspend fun createExamSession(profile: String, tasks: List<TaskEntity>): Long {
-        val session = ExamSessionEntity(
-            profile = profile,
-            remainingTimeSeconds = 3 * 3600 + 55 * 60
-        )
-        val id = statsDao.insertSession(session)
-
-        statsDao.insertExamTasks(
-            tasks.mapIndexed { index, task ->
-                ExamTaskEntity(
-                    sessionOwnerId = id,
-                    taskId = task.taskID,
-                    orderIndex = index // ← сохраняем порядок
-                )
-            }
-        )
-
-        return id
+    suspend fun getLastUnfinishedSession(profile: String): ExamSessionEntity? {
+        return examRepository.getLastUnfinishedSession(profile)
     }
-
 
     fun loadExam(profile: String) {
         viewModelScope.launch {
-            val tasks = withContext(Dispatchers.IO) {
-                val blockRange = when (profile) {
-                    "База" -> 1..21
-                    "Профиль" -> 22..40
-                    "ОГЭ" -> 1..25
-                    else -> emptyList()
-                }
-                val selected = blockRange.mapNotNull { id -> dao.getTasksByBlock(id).randomOrNull() }
-                Log.d("ExamViewModel", "Выбрано ${selected.size} задач для профиля $profile")
-                selected
-            }
-
-            _examTasks.value = tasks
-
-            // Сохраняем сессию и ID
-            sessionId = withContext(Dispatchers.IO) {
-                val newSessionId = createExamSession(profile, tasks)
-                Log.d("ExamViewModel", "Создана сессия sessionId=$newSessionId")
-                newSessionId
-            }
-
-            selectedTaskId = tasks.firstOrNull()?.taskID?.toLong()
-            Log.d("ExamViewModel", "Установлен selectedTaskId=$selectedTaskId")
+            val exam = examRepository.createExam(profile)
+            uiState = uiState.copy(
+                sessionId = exam.sessionId,
+                tasks = exam.tasks,
+                selectedTaskId = exam.selectedTaskId,
+                selectedTab = TaskExamTab.Task
+            )
         }
     }
+
     fun restoreSession(session: ExamSessionEntity) {
         viewModelScope.launch {
-            sessionId = session.sessionId
-
-            val examTaskEntities = statsDao.getTasksBySessionId(session.sessionId)
-                .sortedBy { it.orderIndex }
-
-            val taskIds = examTaskEntities.map { it.taskId }
-            val tasks = dao.getTasksByIds(taskIds)
-
-            // ✨ Восстановим точный порядок через map
-            val taskMap = tasks.associateBy { it.taskID }
-            val orderedTasks = examTaskEntities.mapNotNull { taskMap[it.taskId] }
-
-            _examTasks.value = orderedTasks
-
-            selectedTaskId = examTaskEntities.firstOrNull { it.userAnswer == null }?.taskId?.toLong()
-                ?: examTaskEntities.firstOrNull()?.taskId?.toLong()
+            val exam = examRepository.restoreSession(session)
+            uiState = uiState.copy(
+                sessionId = exam.sessionId,
+                tasks = exam.tasks,
+                selectedTaskId = exam.selectedTaskId,
+                selectedTab = TaskExamTab.Task
+            )
         }
     }
+
+    fun selectTask(taskId: Long?) {
+        uiState = uiState.copy(selectedTaskId = taskId)
+    }
+
+    fun selectTab(tab: TaskExamTab) {
+        uiState = uiState.copy(selectedTab = tab)
+    }
+
     fun submitAnswer(answer: String) {
-        val currentTaskId = selectedTaskId?.toInt() ?: return
-        val session = sessionId ?: return
+        val currentTaskId = uiState.selectedTaskId?.toInt() ?: return
+        val currentSessionId = uiState.sessionId ?: return
 
         viewModelScope.launch {
-            statsDao.updateAnswer(session, currentTaskId, answer, isCorrect = false) // временно false
-
-            val examTaskEntities = statsDao.getTasksBySessionId(session).sortedBy { it.orderIndex }
-            val nextUnanswered = examTaskEntities.firstOrNull { it.userAnswer == null }
-
-            selectedTaskId = nextUnanswered?.taskId?.toLong()
+            val nextTaskId = examRepository.submitAnswer(
+                sessionId = currentSessionId,
+                taskId = currentTaskId,
+                answer = answer
+            )
+            uiState = uiState.copy(
+                selectedTaskId = nextTaskId,
+                selectedTab = TaskExamTab.Task
+            )
         }
     }
-
 
     fun discardAndStartNew(profile: String) {
         viewModelScope.launch {
-            sessionId?.let {
-                statsDao.markSessionCompleted(it)
-                statsDao.deleteExamTasksForSession(it)
-            }
+            uiState.sessionId?.let { examRepository.discardSession(it) }
             loadExam(profile)
         }
     }
+
     suspend fun getCompletedTaskIds(): Set<Long> {
-        val session = sessionId ?: return emptySet()
-        return statsDao.getTasksBySessionId(session)
-            .filter { !it.userAnswer.isNullOrBlank() }
-            .map { it.taskId.toLong() }
-            .toSet()
+        val currentSessionId = uiState.sessionId ?: return emptySet()
+        return examRepository.getCompletedTaskIds(currentSessionId)
     }
-    suspend fun getAnswersForCheck(): List<AnswerCheckItem> {
-        val session = sessionId ?: return emptyList()
 
-        return withContext(Dispatchers.IO) {
-            val examTasks = statsDao.getTasksBySessionId(session).sortedBy { it.orderIndex }
-            val taskIds = examTasks.map { it.taskId }
-            val tasks = dao.getTasksByIds(taskIds)
-            val correctMap = tasks.associateBy({ it.taskID }, { it.answer })
-
-            examTasks.map { examTask ->
-                val user = examTask.userAnswer ?: "—"
-                val correct = correctMap[examTask.taskId] ?: "—"
-
-                Log.d(
-                    "AnswerCheck",
-                    "📝 taskId=${examTask.taskId}, userAnswer=\"$user\", correctAnswer=\"$correct\""
-                )
-
-                AnswerCheckItem(
-                    taskId = examTask.taskId,
-                    userAnswer = user,
-                    correctAnswer = correct
-                )
-            }
-        }
+    suspend fun getAnswersForCheck(): List<ExamAnswerCheckItem> {
+        val currentSessionId = uiState.sessionId ?: return emptyList()
+        return examRepository.getAnswersForCheck(currentSessionId)
     }
-    data class AnswerCheckItem(
-        val taskId: Int,
-        val userAnswer: String,
-        val correctAnswer: String,
-        val isCorrect: Boolean? = null
-    )
+
     fun finalizeExamResults(results: List<Pair<Int, Boolean>>) {
         viewModelScope.launch {
-            val session = sessionId ?: return@launch
-
-            // Сохраняем isCorrect для каждой задачи
-            results.forEach { (taskId, isCorrect) ->
-                statsDao.updateIsCorrect(sessionId = session, taskId = taskId, isCorrect = isCorrect)
-                Log.d("FinalCheck", "💾 taskId=$taskId → isCorrect=$isCorrect")
-            }
-
-            val correctCount = results.count { it.second }
-
-            // Обновляем сессию: завершена и подсчитаны правильные
-            statsDao.updateSessionCompletion(session, correctCount)
-
-            Log.d("FinalCheck", "🎓 Экзамен завершён. Правильных ответов: $correctCount из ${results.size}")
+            val currentSessionId = uiState.sessionId ?: return@launch
+            examRepository.finalizeResults(currentSessionId, results)
         }
     }
-
 }

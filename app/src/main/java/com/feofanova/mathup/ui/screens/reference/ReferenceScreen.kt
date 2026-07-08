@@ -48,7 +48,6 @@ fun ReferenceScreen(
                 )
             )
     ) {
-        // 🔹 Top bar — как на других экранах
         Row(
             modifier = Modifier
                 .fillMaxWidth()

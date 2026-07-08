@@ -2,6 +2,7 @@ package com.feofanova.mathup.data.local.entities
 
 import androidx.room.Entity
 import androidx.room.ForeignKey
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.google.gson.annotations.SerializedName
 
@@ -13,7 +14,8 @@ import com.google.gson.annotations.SerializedName
             childColumns = ["blockOwnerID"],
             onDelete = ForeignKey.CASCADE
         )
-    ]
+    ],
+    indices = [Index(value = ["blockOwnerID"])]
 )
 data class TaskEntity(
     @PrimaryKey val taskID: Int,

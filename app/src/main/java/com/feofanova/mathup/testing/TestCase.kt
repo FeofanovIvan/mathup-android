@@ -25,7 +25,6 @@ val testCases = listOf(
     // TestCase("(\\cos(\\frac{\\pi}{4})+2)*3b=2\\sin(\\frac{\\pi}{4})\\lceil", "(cos(pi/4)+2)*3*b=2*sin(pi/4)", true),
     // TestCase("log_{8}(\\frac{x+a}{x-a})=log_{8}(\\frac{2a}{x-a})\\lceil", "log((x+a)/(x-a),8)=log((2a)/(x-a),8)", true),
 
-    // 🔁 Дополнительные вариации:
     TestCase(
         "(log_{5}(\\frac{\\sqrt[]{3}-1}{2})\\leq x<0)\\cup (0<x\\leq log_{5}(\\frac{\\sqrt[]{13}-1}{2}))\\lceil",
         "(log((sqrt(3)-1)/2, 5)<=x<0)or(0<x<=log((sqrt(13)-1)/2, 5))",

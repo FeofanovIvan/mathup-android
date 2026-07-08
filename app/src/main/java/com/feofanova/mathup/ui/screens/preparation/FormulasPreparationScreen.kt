@@ -41,7 +41,6 @@ fun FormulasPreparationScreen(
             .fillMaxSize()
             .background(Color.White)
     ) {
-        // 🔹 Top bar
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -68,8 +67,6 @@ fun FormulasPreparationScreen(
             Spacer(modifier = Modifier.weight(1f))
             Spacer(modifier = Modifier.width(60.dp))
         }
-
-        // 🔹 WebView
         AndroidView(
             modifier = Modifier
                 .fillMaxSize()

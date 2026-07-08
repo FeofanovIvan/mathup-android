@@ -3,7 +3,6 @@ package com.feofanova.mathup.ui.screens.main
 import android.app.Activity
 import android.content.Context
 import android.os.Build
-import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -42,16 +41,10 @@ import com.feofanova.mathup.ui.screens.news.NewsScreen
 import com.feofanova.mathup.ui.screens.settings.SettingsScreen
 import androidx.core.content.edit
 import androidx.core.view.WindowCompat
-import com.feofanova.mathup.SyncMetadata
-import com.feofanova.mathup.data.characters.GameDataSyncManager
-import com.feofanova.mathup.data.characters.GameDatabase
-import com.feofanova.mathup.data.local.db.MathUpDatabase
-import com.feofanova.mathup.data.local.db.MathUpOgeDatabase
-import com.feofanova.mathup.data.repository.DataSyncManager
 import com.feofanova.mathup.sound.LocalSoundPlayer
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.gson.Gson
-import kotlinx.coroutines.tasks.await
+import com.feofanova.mathup.sync.ContentDatabase as DbType
+import com.feofanova.mathup.sync.ContentUpdateChecker
+import com.feofanova.mathup.sync.ContentUpdateUseCase
 
 @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
 @OptIn(ExperimentalMaterial3Api::class)
@@ -84,6 +77,8 @@ fun MainScreen(navController: NavHostController,
     val snackbarHostState = remember { SnackbarHostState() }
     val dbUpdateQueue = remember { mutableStateListOf<DbType>() }
     val soundPlayer = LocalSoundPlayer.current
+    val contentUpdateChecker = remember { ContentUpdateChecker() }
+    val contentUpdateUseCase = remember { ContentUpdateUseCase() }
 
 
     UpdateDialog(
@@ -92,46 +87,19 @@ fun MainScreen(navController: NavHostController,
         isUpdating = isUpdatingContent,
         snackbarHostState = snackbarHostState,
         context = context,
-        dbUpdateQueue = dbUpdateQueue // обязательно!
+        dbUpdateQueue = dbUpdateQueue,
+        contentUpdateUseCase = contentUpdateUseCase
     )
 
 
     LaunchedEffect(selectedProfile, showProfileDialog) {
         if (!showProfileDialog) {
-            val firestore = FirebaseFirestore.getInstance()
-            val prefs = context.getSharedPreferences("sync_prefs", Context.MODE_PRIVATE)
-            val localMetadataJson = prefs.getString("sync_metadata", null)
-            val localMetadata = localMetadataJson?.let {
-                try {
-                    Gson().fromJson(it, SyncMetadata::class.java)
-                } catch (_: Exception) { null }
-            } ?: SyncMetadata()
-
-            try {
-                val remoteEge = firestore.collection("sync_metadata")
-                    .document("MathUpDatabase").get().await()
-                    .getLong("version")?.toInt() ?: 1
-                val remoteOge = firestore.collection("sync_metadata")
-                    .document("MathUpOgeDatabase").get().await()
-                    .getLong("version")?.toInt() ?: 1
-                val remoteGame = firestore.collection("sync_metadata")
-                    .document("GameDatabase").get().await()
-                    .getLong("version")?.toInt() ?: 1
-
-                val outdatedDbs = mutableListOf<DbType>()
-                if (localMetadata.version_ege < remoteEge) outdatedDbs.add(DbType.EGE)
-                if (localMetadata.version_oge < remoteOge) outdatedDbs.add(DbType.OGE)
-                if (localMetadata.version_game < remoteGame) outdatedDbs.add(DbType.GAME)
-
-                if (outdatedDbs.isNotEmpty()) {
-                    dbUpdateQueue.clear()
-                    dbUpdateQueue.addAll(outdatedDbs)
-                    dbToUpdate.value = dbUpdateQueue.removeFirst()
-                    showUpdateDialog.value = true
-                }
-
-            } catch (e: Exception) {
-                Log.e("MainScreen", "❌ Ошибка получения версий из Firestore", e)
+            val outdatedDbs = contentUpdateChecker.findOutdatedDatabases(context)
+            if (outdatedDbs.isNotEmpty()) {
+                dbUpdateQueue.clear()
+                dbUpdateQueue.addAll(outdatedDbs)
+                dbToUpdate.value = dbUpdateQueue.removeFirst()
+                showUpdateDialog.value = true
             }
         }
     }
@@ -435,9 +403,6 @@ fun SetStatusBarColor(color: Color, darkIcons: Boolean = true) {
 enum class MainTab {
     Home, News, Settings
 }
-enum class DbType {
-    NONE, EGE, OGE, GAME
-}
 
 @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
 @Composable
@@ -447,7 +412,8 @@ fun UpdateDialog(
     isUpdating: MutableState<Boolean>,
     snackbarHostState: SnackbarHostState,
     context: Context,
-    dbUpdateQueue: SnapshotStateList<DbType>
+    dbUpdateQueue: SnapshotStateList<DbType>,
+    contentUpdateUseCase: ContentUpdateUseCase
 ) {
     if (showDialog.value && dbUpdateQueue.isNotEmpty()) {
         AlertDialog(
@@ -495,24 +461,9 @@ fun UpdateDialog(
 
     if (isUpdating.value) {
         LaunchedEffect(Unit) {
+            val result = contentUpdateUseCase(context, dbUpdateQueue.toList())
             try {
-                for (dbType in dbUpdateQueue.toList()) {
-                    when (dbType) {
-                        DbType.EGE -> {
-                            val db = MathUpDatabase.getInstance(context)
-                            DataSyncManager.syncFromRemote(context, db)
-                        }
-                        DbType.OGE -> {
-                            val db = MathUpOgeDatabase.getInstance(context)
-                            DataSyncManager.syncOgeFromRemote(context, db)
-                        }
-                        DbType.GAME -> {
-                            val db = GameDatabase.getInstance(context)
-                            GameDataSyncManager.syncGameData(context, db)
-                        }
-                        else -> {}
-                    }
-                }
+                result.getOrThrow()
                 snackbarHostState.showSnackbar("Все базы обновлены ✅")
             } catch (e: Exception) {
                 snackbarHostState.showSnackbar("❌ Ошибка при обновлении: ${e.localizedMessage}")

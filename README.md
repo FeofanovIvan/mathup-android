@@ -1,62 +1,135 @@
 # MathUp Android
 
-MathUp is an Android math exam preparation app for Russian students preparing for OGE/EGE. The app is built around offline access to learning content, step-by-step tasks, formulas, exam sessions, statistics, custom math input, and interactive learning mechanics.
+MathUp — Android-приложение для подготовки к ОГЭ и ЕГЭ по математике. Приложение объединяет тематическую подготовку, пошаговое решение заданий, экзаменационный режим, справочные материалы, формулы, видео, статистику, игровой раздел и собственную математическую клавиатуру.
 
-## Features
+Основной фокус проекта — работа с учебным контентом в offline-first формате: данные загружаются из bundled assets или удалённого JSON-источника, сохраняются в локальные Room-базы и дальше используются приложением как основной источник истины.
 
-- Topic-based preparation: blocks, tasks, steps, hints, and formulas.
-- Exam mode with session statistics and saved answers.
-- Custom math keyboard for formula input.
-- Draft canvas for handwritten calculations in Compose.
-- Reference materials, formulas, videos, and OGE/EGE profiles.
-- Offline-first content access through local Room databases.
-- Game-style learning elements with math characters.
-- Sound settings stored locally.
+## Возможности
 
-## Tech Stack
+- Подготовка по темам и блокам заданий.
+- Пошаговое решение задач с сохранением прогресса.
+- Экзаменационный режим с восстановлением незавершённой сессии.
+- Проверка ответов через математический ввод.
+- Собственная математическая клавиатура.
+- Черновик для вычислений и набросков.
+- Разделы со справочными материалами, формулами и видео.
+- Поддержка профилей ОГЭ, базового и профильного ЕГЭ.
+- Локальная статистика по заданиям и экзаменам.
+- Игровой раздел с персонажами.
+- Синхронизация учебного контента из Firebase Storage / Firestore.
+- Работа с локальными данными после первичной загрузки.
 
-| Area | Technologies |
+## Технологии
+
+| Область | Используется |
 | --- | --- |
-| Language | Kotlin |
-| UI | Jetpack Compose, Material 3, Navigation Compose, custom Compose components |
-| State | ViewModel, Compose state, Kotlin Coroutines |
-| Local storage | Room, DataStore Preferences, EncryptedSharedPreferences |
-| Sync / content | Asset/Firebase Storage JSON import into Room, snapshot-style sync |
-| Backend / services | Firebase Auth, Firestore, Storage, Realtime Database, Crashlytics |
-| Background work | WorkManager |
-| Build | Gradle Kotlin DSL, version catalog, KSP, R8 minify, resource shrinking |
+| Язык | Kotlin |
+| UI | Jetpack Compose, Material 3, Navigation Compose |
+| Асинхронность | Kotlin Coroutines |
+| Состояние | ViewModel, Compose State, UiState |
+| Локальное хранение | Room, DataStore Preferences, EncryptedSharedPreferences |
+| Синхронизация | Firebase Storage, Firestore, JSON import, локальный sync metadata |
+| Backend-сервисы | Firebase Auth, Firestore, Storage, Realtime Database, Crashlytics |
+| Сборка | Gradle Kotlin DSL, KSP, R8, resource shrinking |
 
-## Architecture
+## Архитектура
 
-The project is organized around UI screens, reusable Compose components, local Room data sources, statistics storage, game data, and synchronization managers.
+Проект постепенно приведён к более поддерживаемой архитектуре без полной переписки MVP. Основные слои:
 
 ```text
 app/src/main/java/com/feofanova/mathup/
   ui/
-    screens/        Compose screens and screen-level ViewModels
-    components/     reusable UI components, custom keyboard, draft canvas
-    navigation/     Navigation Compose graph
-    theme/          Material theme
+    components/      переиспользуемые Compose-компоненты
+    navigation/      Navigation Compose graph
+    screens/         экраны, ViewModel и экранные компоненты
+  domain/
+    repository/      контракты репозиториев
   data/
-    local/          Room databases, DAO, entities for learning content
-    stats/          Room storage for exam/session statistics
-    characters/     Room storage and sync for game characters
-    remote/         exported JSON contract models
-    repository/     DataSyncManager
-  sound/            sound player and DataStore settings
+    local/           Room DAO, entity и базы учебного контента
+    stats/           Room-база статистики и экзаменационных сессий
+    characters/      данные игрового раздела
+    remote/          модели JSON-контрактов
+    repository/      Room/Firebase реализации репозиториев и sync
+  sync/              use case для первичной загрузки и обновления контента
+  sound/             SoundPlayer и настройки звука
 ```
 
-Data flow for learning content:
+Базовый поток данных:
 
 ```text
-Firebase/assets JSON -> DataSyncManager -> Room -> DAO -> ViewModel -> Compose UI
+Firebase / assets JSON
+        -> sync/use case
+        -> Room
+        -> Repository
+        -> ViewModel
+        -> Compose UI
 ```
 
-Room is the main local source of truth for learning content, so the app can work without network after data is loaded.
+Room используется как локальный источник истины для учебного контента, статистики и экзаменационных сессий.
 
-## Security Notes
+## Архитектурные улучшения
 
-The following files are intentionally not committed:
+- Первичная загрузка bundled-контента вынесена из `MainActivity` в `InitialContentSyncUseCase`.
+- Проверка версий контента и обновление баз вынесены из UI в `ContentUpdateChecker` и `ContentUpdateUseCase`.
+- Добавлена модель `SyncMetadata` для хранения версий локального контента.
+- Добавлены репозиторные контракты:
+  - `TaskRepository`
+  - `ExamRepository`
+- DAO-вызовы подготовки и экзамена вынесены из ViewModel в Room-реализации репозиториев:
+  - `RoomTaskRepository`
+  - `RoomExamRepository`
+- `TaskViewModel` и `ExamViewModel` переведены на единый immutable `UiState`.
+- Подготовка и экзамен разбиты на более мелкие Compose-компоненты.
+- Навигация по заданиям экзамена вынесена в `ExamTaskNavigator` и покрыта unit-тестами.
+- Добавлены Room-индексы для FK-полей:
+  - `TaskEntity.blockOwnerID`
+  - `StepEntity.taskOwnerID`
+  - `FormulaEntity.blockOwnerID`
+- Добавлены миграции для основных баз контента.
+- Удалён неиспользуемый дублирующий `AppDatabase`.
+- Убраны временные debug-логи и отладочные комментарии из основного кода.
+- Звуковые эффекты вынесены в общий UI-компонент, чтобы экраны не зависели друг от друга напрямую.
+
+## Offline-first и синхронизация
+
+Приложение может импортировать контент из assets при первом запуске, а затем проверять актуальные версии удалённых баз. После загрузки данные сохраняются в Room и доступны без постоянного подключения к сети.
+
+Синхронизация разделена на несколько частей:
+
+- `InitialContentSyncUseCase` — первичная загрузка bundled-контента.
+- `ContentUpdateChecker` — проверка удалённых версий.
+- `ContentUpdateUseCase` — запуск обновления нужной базы.
+- `DataSyncManager` и `GameDataSyncManager` — импорт JSON-данных в локальные базы.
+
+## Структура экранов экзамена
+
+Экзаменационный экран разделён на отдельные файлы:
+
+- `ExamScreen.kt` — координация состояния экрана.
+- `ExamControls.kt` — вкладки, таймер и боковое меню.
+- `ExamContent.kt` — контент задания и инструкция по клавиатуре.
+- `ExamResults.kt` — проверка ответов, итоговый диалог и HTML-отображение результата.
+- `ExamViewModel.kt` — состояние экзамена и действия пользователя.
+
+## Сборка
+
+Debug-сборка:
+
+```bash
+./gradlew assembleDebug
+```
+
+Unit-тесты:
+
+```bash
+./gradlew testDebugUnitTest
+```
+
+Release-сборка требует локальных файлов конфигурации Firebase и signing config.
+
+## Локальные и секретные файлы
+
+В репозиторий не должны попадать:
 
 - `google-services.json`
 - `local.properties`
@@ -65,20 +138,12 @@ The following files are intentionally not committed:
 - `*.jks`
 - release APK/AAB outputs
 
-Use `keystore.properties.example` as a template for release signing.
+Для release signing можно использовать `keystore.properties.example` как шаблон.
 
-## Build
+## Дальнейшее развитие
 
-```bash
-./gradlew assembleDebug
-```
-
-Release builds require local signing configuration and Firebase configuration files.
-
-## Current Improvement Areas
-
-- Move remaining manual dependency creation toward a clearer DI setup.
-- Standardize screen state around `UiState` / `UiEffect`.
-- Expand unit tests for answer checking and exam/session logic.
-- Consider replacing Gson with kotlinx.serialization for stricter JSON contracts.
-- Improve content sync from snapshot import toward delta/version-based synchronization.
+- Ввести `AppContainer` или Hilt для централизованного DI.
+- Заменить Room entity в контрактах репозиториев на domain-модели.
+- Перенести фоновые обновления контента в WorkManager.
+- Расширить unit-тесты для экзаменационных сценариев и проверки ответов.
+- Уменьшить дублирование portrait/landscape-разметки в экзаменационном режиме.

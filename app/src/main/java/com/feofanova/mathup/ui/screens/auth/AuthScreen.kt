@@ -1,6 +1,5 @@
 package com.feofanova.mathup.ui.screens.auth
 
-import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -233,19 +232,17 @@ fun GoogleSignInButton(
             .width(312.dp)
             .height(48.dp)
             .clickable (
-                indication = null, // ❌ отключаем серый прямоугольник
+                indication = null,
                 interactionSource = interactionSource
             ){
                 coroutineScope.launch {
                     try {
-                        // 1) Опция для One-Tap «Sign in with Google»
                         val signInOption = GetSignInWithGoogleOption.Builder(
                             context.getString(R.string.default_web_client_id)
                         )
-                            .setNonce("") // можно убрать или задать для защиты от replay-атак
+                            .setNonce("")
                             .build()
 
-                        // 2) Собираем запрос к Credential Manager
                         val request = GetCredentialRequest.Builder()
                             .addCredentialOption(signInOption)
                             .build()
@@ -262,16 +259,6 @@ fun GoogleSignInButton(
                             .addOnSuccessListener { authResult ->
                                 val user = authResult.user ?: return@addOnSuccessListener
 
-                                // 🔐 Сохраняем токен
-                                Log.d("GoogleAuth", "✅ Успешный вход через Google. Сохраняем токен...")
-                                try {
-
-                                    Log.d("GoogleAuth", "🔐 Токен сохранён успешно: $idToken")
-                                } catch (e: Exception) {
-                                    Log.e("GoogleAuth", "❌ Ошибка при сохранении токена: ${e.localizedMessage}")
-                                }
-
-                                // 🔄 Сохраняем профиль в Firestore
                                 FirebaseFirestore.getInstance()
                                     .collection("users")
                                     .document(user.uid)
@@ -284,7 +271,6 @@ fun GoogleSignInButton(
                                         )
                                     )
 
-                                // 🔁 Навигация
                                 navController.navigate(Routes.MAIN) {
                                     popUpTo(Routes.AUTH) { inclusive = true }
                                 }

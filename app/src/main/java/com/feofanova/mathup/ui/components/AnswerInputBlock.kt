@@ -18,7 +18,7 @@ fun AnswerInputBlock(
     LaunchedEffect(Unit) {
         coordinator.onLatexUpdate = { updatedLatex ->
             latexText = updatedLatex.replace("\\lceil", "\\lceil")
-            onAnswerChanged(latexText) // 👈 теперь пробрасываем наверх
+            onAnswerChanged(latexText)
         }
     }
 

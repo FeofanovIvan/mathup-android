@@ -46,7 +46,6 @@ fun ReferenceDetailScreen(
             .fillMaxSize()
             .background(Color.White)
     ) {
-        // 🔹 Top bar (в том же стиле)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -74,8 +73,6 @@ fun ReferenceDetailScreen(
             Spacer(modifier = Modifier.weight(1f))
             Spacer(modifier = Modifier.width(60.dp))
         }
-
-        // 🔹 WebView с отступами по бокам и сверху
         AndroidView(
             modifier = Modifier
                 .fillMaxSize()

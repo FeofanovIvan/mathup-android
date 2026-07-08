@@ -4,8 +4,8 @@ import android.content.Context
 import android.net.Uri
 import android.util.Log
 import androidx.room.withTransaction
-import com.feofanova.mathup.SyncMetadata
 import com.feofanova.mathup.data.characters.entities.MathCharacterEntity
+import com.feofanova.mathup.sync.SyncMetadata
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -60,7 +60,6 @@ object GameDataSyncManager {
                     throw Exception("Не все изображения были успешно загружены")
                 }
 
-                Log.d("GameDataSync", "✅ Синхронизация персонажей завершена")
                 try {
                     val firestore = FirebaseFirestore.getInstance()
                     val gameVersion = firestore.collection("sync_metadata")
@@ -72,27 +71,25 @@ object GameDataSyncManager {
                         try { Gson().fromJson(it, SyncMetadata::class.java) } catch (_: Exception) { null }
                     }
 
-                    val updated = oldMetadata?.copy(version_game = gameVersion)
-                        ?: SyncMetadata(version_game = gameVersion)
+                    val updated = oldMetadata?.copy(versionGame = gameVersion)
+                        ?: SyncMetadata(versionGame = gameVersion)
 
                     prefs.edit { putString("sync_metadata", Gson().toJson(updated)) }
 
-                    Log.d("GameDataSync", "💾 Версия GAME обновлена: $gameVersion")
                 } catch (e: Exception) {
-                    Log.e("GameDataSync", "⚠️ Ошибка при обновлении версии GAME", e)
+                    Log.e("GameDataSync", "Ошибка при обновлении версии GAME", e)
                 }
 
 
             } catch (e: Exception) {
-                Log.e("GameDataSync", "❌ Ошибка при синхронизации данных персонажей", e)
-                throw e // пробрасываем дальше, чтобы вызвать установку статуса "error"
+                Log.e("GameDataSync", "Ошибка при синхронизации данных персонажей", e)
+                throw e
             }
         }
     }
     suspend fun syncGameDataFromAssets(context: Context, gameDb: GameDatabase) {
         withContext1(context = Dispatchers.IO) {
             try {
-                Log.d("GameDataSync", "📥 Загрузка characters_export.json из assets")
 
                 // 1. Чтение JSON из assets
                 val json = context.assets.open("characters_export.json").bufferedReader().use { it.readText() }
@@ -100,7 +97,6 @@ object GameDataSyncManager {
                 val type = object : TypeToken<List<MathCharacterEntity>>() {}.type
                 val characters: List<MathCharacterEntity> = gson.fromJson(json, type)
 
-                Log.d("GameDataSync", "🔍 Персонажей в JSON: ${characters.size}")
 
                 // 2. Импорт в БД
                 gameDb.withTransaction {
@@ -122,9 +118,8 @@ object GameDataSyncManager {
                                     input.copyTo(output)
                                 }
                             }
-                            Log.d("GameImageSync", "✅ ${character.imageName} скопирован в filesDir")
                         } catch (e: Exception) {
-                            Log.e("GameImageSync", "❌ Ошибка при копировании ${character.imageName}", e)
+                            Log.e("GameImageSync", "Ошибка при копировании ${character.imageName}", e)
                             imageErrorsFound = true
                         }
                     }
@@ -134,10 +129,9 @@ object GameDataSyncManager {
                     throw Exception("Не все изображения были успешно скопированы из assets")
                 }
 
-                Log.d("GameDataSync", "✅ Синхронизация персонажей из assets завершена")
 
             } catch (e: Exception) {
-                Log.e("GameDataSync", "❌ Ошибка при импорте персонажей из assets", e)
+                Log.e("GameDataSync", "Ошибка при импорте персонажей из assets", e)
                 throw e
             }
         }

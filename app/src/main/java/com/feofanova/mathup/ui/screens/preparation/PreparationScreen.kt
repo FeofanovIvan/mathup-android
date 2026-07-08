@@ -73,7 +73,6 @@ fun PreparationScreen(profile: String, onBack: () -> Unit, navController: NavCon
                 )
             )
     ) {
-        // 🔹 Top bar
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -94,8 +93,6 @@ fun PreparationScreen(profile: String, onBack: () -> Unit, navController: NavCon
             )
             Spacer(modifier = Modifier.weight(1f))
         }
-
-        // 🔹 Content
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -111,7 +108,7 @@ fun PreparationScreen(profile: String, onBack: () -> Unit, navController: NavCon
                     title = "Задание $displayIndex",
                     blockID = actualBlockID,
                     profile = profile,
-                    progress = blockProgressMap[actualBlockID] ?: 0f, // 👈 передаём
+                    progress = blockProgressMap[actualBlockID] ?: 0f,
                     navController = navController,
                     onBlockClick = { blockId ->
                         navController.navigate("${Routes.TASKS}/$blockId/$profile")
@@ -226,7 +223,7 @@ fun PreparationBlockCard(
 fun PreparationButton(
     text: String,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier // ⚠️ обязателен
+    modifier: Modifier = Modifier
 ) {
     Button(
         onClick = onClick,

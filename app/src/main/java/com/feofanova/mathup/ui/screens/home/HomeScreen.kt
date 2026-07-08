@@ -107,10 +107,8 @@ fun CircleCardItem(
             repeatMode = RepeatMode.Reverse
         )
     )
-
-    // 🔹 Адаптивный отступ: ближе к центру
     val horizontalPadding = (screenWidth * 0.06f).coerceAtLeast(12.dp)
-    val imageSize = (screenWidth * 0.26f).coerceIn(90.dp, 140.dp) // 🔹 размер круга
+    val imageSize = (screenWidth * 0.26f).coerceIn(90.dp, 140.dp)
     val soundPlayer = LocalSoundPlayer.current
     Row(
         modifier = Modifier

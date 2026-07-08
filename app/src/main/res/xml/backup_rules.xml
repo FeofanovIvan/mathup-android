@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <exclude domain="database" path="mathup_database" />
+    <exclude domain="database" path="mathup_oge_database" />
+    <exclude domain="database" path="stats.db" />
+    <exclude domain="database" path="game_database" />
+</full-backup-content>

@@ -57,7 +57,6 @@ fun RulesScreen(profile: String, onBack: () -> Unit) {
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // 🔹 Top AppBar
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -98,7 +97,7 @@ fun RulesScreen(profile: String, onBack: () -> Unit) {
         ) {
             // Применяем scaleFactor к высоте
             RulesWebView(
-                fileName = fileName, // 👈 тут передаём нужный файл
+                fileName = fileName,
                 onHeightChanged = { hPx -> contentHeightPx = hPx },
                 modifier = Modifier
                     .fillMaxWidth()

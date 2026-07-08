@@ -75,7 +75,6 @@ fun VideoScreen(profile: String, onBack: () -> Unit, navController: NavControlle
                 )
             )
     ) {
-        // 🔹 Top bar
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -104,8 +103,6 @@ fun VideoScreen(profile: String, onBack: () -> Unit, navController: NavControlle
             Spacer(modifier = Modifier.weight(1f))
             Spacer(modifier = Modifier.width(60.dp))
         }
-
-        // 🔹 Video list
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()

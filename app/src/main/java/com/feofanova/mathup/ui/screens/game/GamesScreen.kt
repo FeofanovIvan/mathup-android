@@ -30,7 +30,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.style.TextAlign
-import com.feofanova.mathup.ui.screens.exam.PlayFinalSound
+import com.feofanova.mathup.ui.components.PlayFinalSound
 import com.feofanova.mathup.ui.screens.main.SetStatusBarColor
 import java.io.File
 
@@ -111,7 +111,6 @@ fun GamesScreen(profile: String, onBack: () -> Unit) {
                 )
             )
     ) {
-        // 🔹 Custom Top Bar
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -143,8 +142,6 @@ fun GamesScreen(profile: String, onBack: () -> Unit) {
 
             Spacer(modifier = Modifier.size(48.dp)) // Чтобы сбалансировать иконку слева
         }
-
-        // 🔹 Main Content with padding and scroll
         Column(
             modifier = Modifier
                 .fillMaxSize()

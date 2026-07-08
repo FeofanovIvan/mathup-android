@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="database" path="mathup_database" />
+        <exclude domain="database" path="mathup_oge_database" />
+        <exclude domain="database" path="stats.db" />
+        <exclude domain="database" path="game_database" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="database" path="mathup_database" />
+        <exclude domain="database" path="mathup_oge_database" />
+        <exclude domain="database" path="stats.db" />
+        <exclude domain="database" path="game_database" />
+    </device-transfer>
+</data-extraction-rules>

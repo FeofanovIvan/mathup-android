@@ -2,6 +2,7 @@ package com.feofanova.mathup.data.local.entities
 
 import androidx.room.Entity
 import androidx.room.ForeignKey
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
 @Entity(
@@ -12,7 +13,8 @@ import androidx.room.PrimaryKey
             childColumns = ["blockOwnerID"],
             onDelete = ForeignKey.CASCADE
         )
-    ]
+    ],
+    indices = [Index(value = ["blockOwnerID"])]
 )
 data class FormulaEntity(
     @PrimaryKey val formulaID: Int,

@@ -15,9 +15,6 @@ fun TestScreen() {
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        // Отладочная надпись
-        Log.d("AutoTest", "🔧 TestScreen запущен. Кол-во тестов: ${testCases.size}")
-
         Column(modifier = Modifier.height(1.dp)) {
             testCases.forEachIndexed { index, test ->
                 MathAnswerChecker(
@@ -25,10 +22,9 @@ fun TestScreen() {
                     correctLatex = test.correctLatex,
                     onResult = { actual ->
                         if (actual == test.expectedResult) {
-                            Log.d("AutoTest", "✅ Test $index passed")
                         } else {
                             Log.e("AutoTest", """
-                                ❌ Test $index failed
+                                Test $index failed
                                 user: ${test.userLatex}
                                 correct: ${test.correctLatex}
                                 expected: ${test.expectedResult}
